@@ -1,0 +1,90 @@
+//구조적 모델링
+
+module ha(
+  input a,
+  input b,
+  output s,
+  output c );
+
+  assign s = a ^ b; // 입력 a과 b를 XOR하여 s에 출력
+  assign c = a & b; // 입력 a과 b를 AND하여 c에 출력
+endmodule
+
+//테스트벤치
+
+`timescale 1ns / 1ps
+module ha_tb();
+
+  reg a, b;
+  wire s, c;
+  ha uut (
+    .a(a), .b(b),
+    .s(s), c(c)
+    );
+    
+ initial begin
+    a = 0; b = 0;
+ #1000 $stop;
+ end
+ 
+    always #50 a = ∼a;
+    always #100 b = ∼b;
+ 
+endmodule
+
+//구조적 모델링 data flow modeling
+
+module ha1(a, b, s, c);
+  input a, b;
+  output s, c;
+  
+  assign s = a ^ b;  //출력 sum의 구현
+  assign c = a & b;  //출력 carry-out의 구현
+  
+endmodule
+
+// 동작적 모델링 behavioral modeling
+
+module ha2(a, b, s, c);
+    input a, b;
+    output s, c;
+    wire [1:0] d_in[1];
+    reg [1:0] d_out[1];
+    
+    assign d_in = {a, b};  //결합문으로 두개의 입력을 묶음
+    assign c = d_out[1];
+    assign s = d_out[0];
+    
+    always@(d_in)
+        case(d_in)  //case문을 사용하여 주어진 입력값에 의해 출력값을 전달하는 방식
+        2'b00 : d_out = 2'b00;
+        2'b01 : d_out = 2'b01;
+        2'b10 : d_out = 2'b01;
+        default: d_out = 2'b10;  //입력값이 2b'11 일때는 1과 1을 덧셈한 결과이므로 2'b10이 구동됨
+        endcase
+        
+endmodule
+
+//테스트벤치
+
+'timescale 1ns / 1ps
+
+module tb_ha1; //테스트벤치 모듈선언부에 ()가 없음
+
+    reg a, b;  //테스트벤치 모듈의 입력선언, 즉 input명령어를 reg로 대체함
+    wire s, c;  // 테스트벤치 모듈의 출력선언, 즉 output명령어를 wire러 대체함
+    
+    ha1 uut(a, b, s, c);
+    
+    initial begin  //input 초기화
+        a=0;
+        b=0;
+        #100  //진리표이 입력을 100ns 단위로 
+        a=0; b=0; #100;
+        a=0; b=1; #100;
+        a=1; b=0; #100;
+        a=1; b=1; #100;
+        $finish;
+     end
+     
+endmodule
