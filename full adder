@@ -1,0 +1,142 @@
+//동작적 모델링
+
+ module fa (
+    input a,
+    input b,
+    input cin,
+    output s,
+    output cout );
+    
+ reg s, cout;
+ 
+ always @(a, b, cin)
+ begin
+    if (a == 0 && b == 0 && cin == 0) begin s = 0; cout = 0; end
+    else if (a == 0 && b == 0 && cin == 1) begin s = 1; cout = 0; end
+    else if (a == 0 && b == 1 && cin == 0) begin s = 1; cout = 0; end
+    else if (a == 0 && b == 1 && cin == 1) begin s = 0; cout = 1; end
+    else if (a == 1 && b == 0 && cin == 0) begin s = 1; cout = 0; end
+    else if (a == 1 && b == 0 && cin == 1) begin s = 0; cout = 1; end
+    else if (a == 1 && b == 1 && cin == 0) begin s = 0; cout = 1; end
+    else if (a == 1 && b == 1 && cin == 1) begin s = 1; cout = 1; end
+ end // 조건문을 통해 각각의 입력 값 상황에 따라 출력 값을 기술
+ 
+endmodule
+
+//테스트벤치
+
+`timescale 1ns/1ps
+module fa_tb();
+// Inputs
+    reg a; reg b; reg cin;
+// Outputs
+    wire s; wire cout;
+// fa 블록을 uut라는 이름의 인스턴스로 불러옴
+    fa uut (
+      .a(a), 
+      .b(b),
+      .cin(cin),
+      .s(s),
+      .cout(cout)
+      );
+ 
+    initial begin
+      a = 0; b = 0; cin = 0; #1000 $stop ;
+    end // 초기값 설정
+      
+    always #200 a = ∼a; // 입력 a를 주기 400 ns 클럭으로 정의
+    always #100 b = ∼b; // 입력 b를 주기 200 ns 클럭으로 정의
+    always #50 cin = ∼cin; // 입력 cin을 주기 100 ns 클럭으로 정의
+
+endmodule
+
+#################################################################
+
+//구조적 모델링
+
+module fulladder1(a, b, carry_in, sum, carry_out);
+    input a, b, carry_in;
+    output sum, carry_out;
+    wire temp_sum, temp_c1, temp_c2;
+    
+    halfadder1 u0 (
+        .a(a),
+        .b(b),
+        .sum(temp_sum),
+        .carry_out(temp_c1)
+        );
+        
+    halfadder1 u1 (
+        .a(temp_sum),
+        .b(carry_in),
+        .sum(temp_sum),
+        .carry_out(temp_c2)
+        );
+        
+    or u2 (carry_out, temp_c1, temp_c2);  // 출력 carry_out은 두개의 반가산기 캐리값의 OR함수로 구현
+    
+endmodule
+
+//동작적 모델링
+
+module fulladder1(a, b, carry_in, sum, carry_out);
+    input a;
+    input b;
+    input carry_in;
+    
+    output sum;
+    output carry_out;
+    
+    wire [2:0] d_in;
+    reg [1:0] d_out;
+    
+    assign d_in = {x, y, c_in};
+    assign carry_out = d_out[1];
+    assign sum_out =nd_out[0];
+    
+    always@(d_in)
+        case(d_in)
+        3'b000 : d_out = 2'b00;
+        3'b001 : d_out = 2'b01;
+        3'b010 : d_out = 2'b01;
+        3'b011 : d_out = 2'b10;
+        3'b100 : d_out = 2'b01;
+        3'b101 : d_out = 2'b10;
+        3'b110 : d_out = 2'b10;
+        default: d_out = 2'b11;
+        endcase
+        
+endmodule
+
+//테스트벤치
+
+`timescale 1ns/1ps
+
+module fulladder1;
+
+reg a, b, carry_in;
+wire sum, carry_out;
+
+fulladder1 uut (a, b, carry_out, sum, carry_out);
+
+initial begin
+    a=0;
+    b=0;
+    carry_in = 0;
+    
+    #100;
+    a=0; b=0; carry_in=0; #100;
+    a=0; b=1; carry_in=0; #100;
+    a=1; b=0; carry_in=0; #100;
+    a=1; b=1; carry_in=0; #100;
+    a=0; b=0; carry_in=1; #100;
+    a=0; b=1; carry_in=1; #100;
+    a=1; b=0; carry_in=1; #100;
+    a=1; b=1; carry_in=1; #100;
+    $finish;
+end
+
+endmodule
+    
+    
+        
