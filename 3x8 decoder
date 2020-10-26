@@ -1,0 +1,52 @@
+//Verilog Code
+
+module dec3x8(
+   input [2:0] a,
+    output [7:0] d
+    );
+
+    reg [7:0] d;
+
+    always @(a)
+    begin
+      case(a) // a 입력 값에 따라 d 출력 값을 결정
+        3'b000 : d = 8'b00000001;
+        3'b001 : d = 8'b00000010;
+        3'b010 : d = 8'b00000100;
+        3'b011 : d = 8'b00001000;
+        3'b100 : d = 8'b00010000;
+        3'b101 : d = 8'b00100000;
+        3'b110 : d = 8'b01000000;
+        3'b111 : d = 8'b10000000;
+        default : d = 8'b00000000;
+      endcase
+    end
+
+endmodule
+
+//테스트벤치
+
+`timescale 1ns/1ps
+module dec3x8_tb();
+  // Inputs
+    reg [2:0] a;
+
+  // Output d
+    wire [7:0] d;
+    
+    // fa 블록을 uut라는 이름의 인스턴스로 불러옴
+    dec3x8 uut (
+      .a(a),
+      .d(d)
+      );
+
+        initial begin
+          a = 0;
+          #1000 $stop;
+        end // 초기값 설정
+
+      always #200 a[2] = ∼a[2]; // 입력 a[2]를 주기 400 ns 클럭으로 정의
+      always #100 a[1] = ∼a[1]; // 입력 a[1]을 주기 200 ns 클럭으로 정의
+      always #50 a[0] = ∼a[0]; // 입력 a[0]을 주기 100 ns 클럭으로 정의
+
+endmodule
