@@ -19,7 +19,7 @@ module ha_tb();
   wire s, c;
   ha uut (
     .a(a), .b(b),
-    .s(s), c(c)
+    .s(s), .c(c)
     );
     
  initial begin
