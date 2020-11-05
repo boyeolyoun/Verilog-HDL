@@ -1,0 +1,48 @@
+'timescale 1ns/1ps
+
+module dec_3x8 (a, d);
+  input [2:0] a;
+  output [7:0] d;
+  
+  reg [7:0] d;
+  
+  always @(a) begin
+    if (a == 0)      d = 8'b00000001;
+    else if (a == 1) d = 8'b00000010;
+    else if (a == 2) d = 8'b00000100;
+    else if (a == 3) d = 8'b00001000;
+    else if (a == 4) d = 8'b00010000;
+    else if (a == 5) d = 8'b00100000;
+    else if (a == 6) d = 8'b01000000;
+    else             d = 8'b10000000;
+    
+   end
+endmodule
+
+#######  test bench code ################################
+
+'timescale 1ns/1ps
+
+module tb;
+  reg [2:0] a;
+  wire [7:0] d;
+  
+  dec_3x8 uut (a, d);
+  
+  initial begin
+      a = 3'b000;
+      #100;
+      
+      a = 3'b000; #100;
+      a = 3'b001; #100;
+      a = 3'b010; #100;
+      a = 3'b011; #100;
+      a = 3'b100; #100;
+      a = 3'b101; #100;
+      a = 3'b110; #100;
+      a = 3'b111; #100;
+      $finish;
+   end
+   
+endmodule
+
