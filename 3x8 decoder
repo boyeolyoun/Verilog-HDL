@@ -24,7 +24,7 @@ module dec3x8(
 
 endmodule
 
-//테스트벤치
+########### 테스트벤치 ###############################
 
 `timescale 1ns/1ps
 module dec3x8_tb();
