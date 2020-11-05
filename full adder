@@ -23,7 +23,7 @@
  
 endmodule
 
-//테스트벤치
+############ 테스트벤치 ####################
 
 `timescale 1ns/1ps
 module fa_tb();
@@ -108,7 +108,7 @@ module fulladder1(a, b, carry_in, sum, carry_out);
         
 endmodule
 
-//테스트벤치
+############# 테스트벤치 ###############
 
 `timescale 1ns/1ps
 
