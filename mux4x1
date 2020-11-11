@@ -1,0 +1,38 @@
+module mux4x1(
+ input [3:0] a,
+ input [1:0] s,
+ output out1 );
+ reg out1;
+ always @(a, s)
+ begin
+ case(s) // s의 값에 따라 4비트인 a중 한개 비트를 선택
+ 2'b00 : out1 = a[0];
+ 2'b01 : out1 = a[1];
+ 2'b10 : out1 = a[2];
+ 2'b11 : out1 = a[3];
+ endcase
+ end
+endmodule
+
+###### 테스트벤치 ##############
+
+module tb();
+// Inputs
+ reg [3:0] a; reg [1:0] s;
+// Outputs
+ wire out1;
+// uut라는 이름으로 mu×4×1을 사례화
+ mux4x1 uut (
+ .a(a),
+ .s(s),
+ .out1(out1)
+ );
+ initial begin a = 0; s = 0; // 입력 포트 초기화
+ #4000; end // 4000ns 까지 시뮬레이션
+    always #50 a[0] = ~a[0]; 
+    always #100 a[1] = ~a[1];
+    always #200 a[2] = ~a[2];
+    always #400 a[3] = ~a[3];
+    always #1000 s[0] = ~s[0];
+    always #2000 s[1] = ~s[1];
+endmodule
