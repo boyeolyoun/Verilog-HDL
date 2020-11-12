@@ -1,0 +1,82 @@
+######## 코드 소스 #####################
+
+module mux4x1(s, in1, in2, in3, in4, dout);
+
+ input [1:0] s;
+ input [3:0] in1, in2, in3, in4;
+ output [3:0] dout;
+ reg [3:0] dout;
+ 
+ always @(s or in1 or in2 or in3 or in4)
+    begin
+        if      (s==2'b00) dout = in1;
+        else if (s==2'b01) dout = in2;
+        else if (s==2'b10) dout = in3;
+        else if (s==2'b11) dout = in4;
+        else               dout = 4'bx;
+    end 
+endmodule
+
+
+######## 테스트벤치 #####################
+
+module tb();
+    reg [1:0] s;
+    reg [3:0] in1, in2, in3, in4;
+    wire [3:0] dout;
+    
+mux4x1 uut(
+    .s(s),
+    .in1(in1),
+    .in2(in2),
+    .in3(in3),
+    .in4(in4),
+    .dout(dout)
+    );
+    
+initial begin
+    s=0;
+    in1=0;
+    in2=0;
+    in3=0;
+    in4=0;
+    
+    #100;
+    s=2'b00; in1=3; in2=4; in3=5; in4=6; #200;
+    s=2'b01; in1=4; in2=5; in3=6; in4=7; #200;
+    s=2'b10; in1=5; in2=6; in3=7; in4=8; #200;
+    s=2'b11; in1=6; in2=7; in3=8; in4=9; #200;    
+    $finish;
+end
+
+endmodule
+
+########## 입출력 핀 할당 #######################
+
+in1[0]  SW1
+in1[1]  SW2
+in1[2]  SW3
+in1[3]  SW4
+
+in2[0]  SW5
+in2[1]  SW6
+in2[2]  SW7
+in2[3]  SW8
+
+in3[0]  SW9
+in3[1]  SW10
+in3[2]  SW11
+in3[3]  SW12
+
+in4[0]  SW13
+in4[1]  SW14
+in4[2]  SW15
+in4[3]  SW15
+
+s[0] push sw up
+s[1] push sw mid
+
+dout[0] LD4
+dout[1] LD5
+dout[2] LD6
+dout[3] LD7
