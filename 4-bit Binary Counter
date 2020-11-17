@@ -1,0 +1,46 @@
+#############  Verilog Code #####################
+
+module cnt4(pr_b,clr_b,clk,q);
+input pr_b;
+input clr_b;
+input clk;
+output [3:0] q;
+reg [3:0] q;
+always @(posedge clk or negedge pr_b or negedge clr_b)
+// 클럭의 positive edge 또는 pr_b 또는 clr_b의 negative edge일 때
+// begin∼end가 수행
+begin
+if (pr_b == 0) q <= 4'b1111;
+else if (clr_b == 0) q <= 4'b0000;
+else
+begin
+if (q == 4'b1111) q <= 4'b0000; // 카운터 순환
+else q <= q + 1; // 1씩 증가
+end
+end
+endmodule
+
+############# Test Bench ###########################
+
+module tb();
+// Inputs
+reg pr_b;
+reg clr_b;
+reg clk;
+// Outputs
+wire q;
+// 설계한 블록을 uut라는 이름의 인스턴스로 사례화
+cnt4 uut (
+.pr_b(pr_b),
+.clr_b(clr_b),
+.clk(clk),
+.q(q)
+);
+// 입력 신호들에 값 할당
+initial begin
+pr_b = 0; clr_b = 1; clk = 0;
+#100 pr_b = 1; clr_b = 0;
+#100 clr_b = 1;
+end
+always #50 clk = ~clk;
+endmodule
