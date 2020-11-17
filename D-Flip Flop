@@ -1,0 +1,66 @@
+###########  Verilog Code  ##################
+
+module dff (
+input clk,
+input d,
+input pr_b,
+input clr_b,
+output q );
+reg q;
+always @(posedge clk or negedge pr_b or negedge clr_b)
+// 클록의 positive edge 또는 pr_b 또는 clr_b가 0이 될 때
+// 아래의 begin∼end를 실행
+begin
+if (pr_b == 0) q <= 1;
+else if (clr_b == 0) q <= 0;
+else q <= d;
+end
+endmodule
+
+############# 테스트벤치 . tb #####################
+
+module tb();
+// Inputs
+reg clk;
+reg d;
+reg pr_b;
+reg clr_b;
+// Outputs
+wire q;
+// 설계한 블록을 uut라는 이름의 인스턴스로 사례화
+dff uut (
+.clk(clk),
+.d(d),
+.pr_b(pr_b),
+.clr_b(clr_b),
+.q(q)
+);
+// 입력 신호들에 값 할당
+initial begin
+clk = 0; d = 0; pr_b = 0; clr_b = 1;
+#100 pr_b = 1; clr_b = 0;
+#100 clr_b = 1;
+#100 d = 1;
+#200 d = 0;
+#300 d = 1;
+#400 d = 0;
+end
+always #50 clk = ~clk;
+endmodule
+
+
+########## Constraints dff.xdc ################################
+
+set_property IOSTANDARD LVCMOS33 [get_ports clk]
+set_property IOSTANDARD LVCMOS33 [get_ports clr_b]
+set_property IOSTANDARD LVCMOS33 [get_ports d]
+set_property IOSTANDARD LVCMOS33 [get_ports pr_b]
+set_property IOSTANDARD LVCMOS33 [get_ports q]
+set_property PACKAGE_PIN M2 [get_ports clk]
+set_property PACKAGE_PIN L3 [get_ports clr_b]
+set_property PACKAGE_PIN K3 [get_ports d]
+set_property PACKAGE_PIN J4 [get_ports pr_b]
+set_property PACKAGE_PIN F15 [get_ports q]
+
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {pr_b_IBUF}]
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {clk_IBUF}]
