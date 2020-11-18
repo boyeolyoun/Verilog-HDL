@@ -1,0 +1,54 @@
+100MHz clock input
+1Hz Frequency Demultiplier
+50% duty cycle
+run 1swe simulation
+
+############### verilog code ###########################
+
+module frq_1hz(clk, reset, clk_out);
+    parameter main_clk=100000000, output_freq=1;
+    parameter clk_hilow_cnt_value = ((main_clk/output_freq)/2)-1;
+    input clk;
+    input reset;
+    output reg clk_out;
+    integer clk_cnt;
+    
+    always @(negedge reset, posedge clk) begin
+    if (reset ==1'b0) begin
+        clk_cnt <= 0;
+        clk_out <=1'b0;
+    end else begin
+    if (clk_cnt == clk_hilow_cnt_value) begin
+        clk_cnt <= 0;
+        clk_out <= ~clk_out;
+    end else
+        clk_cnt <= clk_cnt+1;
+    end
+    end
+endmodule
+
+
+################ Tsst bench ###############################
+
+module tb;
+
+    reg clk, reset;
+    wire clk_out;
+    
+    frq_1hz uut(clk, reset, clk_out);
+    
+    initial begin
+        clk = 1'b0;
+        reset = 1'b0;
+        #100
+        reset = 1'b1;
+    end
+    always #5 clk = ~clk;
+    
+endmodule
+
+#########################################
+
+clk Clock R4
+rst reset SW U7
+clk_out LED F15
