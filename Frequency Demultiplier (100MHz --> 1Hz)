@@ -1,7 +1,7 @@
 100MHz clock input
 1Hz Frequency Demultiplier
 50% duty cycle
-run 1swe simulation
+run 1sec simulation
 
 ############### verilog code ###########################
 
