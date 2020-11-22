@@ -1,6 +1,6 @@
 100MHz clock input
 1Hz Frequency Demultiplier
-50% duty cycle
+50% duty cycle --> 50,000,000 출력에 0, 1을 반전
 run 1sec simulation
 
 ############### verilog code ###########################
