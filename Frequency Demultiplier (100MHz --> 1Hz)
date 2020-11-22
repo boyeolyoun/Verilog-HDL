@@ -7,7 +7,7 @@ run 1sec simulation
 
 module frq_1hz(clk, reset, clk_out);
     parameter main_clk=100000000, output_freq=1;
-    parameter clk_hilow_cnt_value = (main_clk/output_freq)/2;
+    parameter clk_hilow_cnt_value = ((main_clk/output_freq)/2)-1;
     input clk;
     input reset;
     output reg clk_out;
