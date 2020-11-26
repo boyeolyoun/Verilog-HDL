@@ -1,7 +1,7 @@
-100MHz clock input
-1Hz Frequency Demultiplier
-50% duty cycle --> 50,000,000 출력에 0, 1을 반전
-run 1sec simulation
+//100MHz clock input
+//1Hz Frequency Demultiplier
+//50% duty cycle --> 50,000,000 출력에 0, 1을 반전
+//run 1sec simulation
 
 ############### verilog code ###########################
 
@@ -49,6 +49,6 @@ endmodule
 
 #########################################
 
-clk Clock R4
-rst reset SW U7
-clk_out LED F15
+//clk Clock R4
+//rst reset SW U7
+//clk_out LED F15
