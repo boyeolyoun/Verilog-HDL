@@ -1,0 +1,139 @@
+module clcd
+(
+/*****************************************************
+** Input Signal Define **
+*****************************************************/
+input wire clk ,
+input wire rstb ,
+/*****************************************************
+** Output Signal Define **
+*****************************************************/
+output wire [7:0] lcd_d ,
+output wire lcd_rs ,
+output wire lcd_rw ,
+output wire lcd_e
+);
+/*****************************************************
+** Reg 정의 **
+*****************************************************/
+reg [23:0] clk_cnt ;
+reg clk_50 ;
+reg [8:0] lcd_cnt ;
+reg [7:0] lcd_db ;
+/*****************************************************
+** Wire 정의 **
+*****************************************************/
+wire [7:0] lcd_state ;
+/*****************************************************
+ 50 Hz Clock 생성 : 100MHz를 200만 분주하여 50Hz 생성
+*****************************************************/
+always @(posedge clk or negedge rstb) begin
+ if (!rstb) begin
+ clk_cnt <= 24'd0;
+ clk_50 <= 0; end
+ else begin
+ if (clk_cnt == 24'd999999) begin // 정상동작시 선택
+// if (clk_cnt == 24'd1) begin // 시뮬레이션시 선택
+ clk_cnt <= 24'd0;
+ clk_50 <= ~clk_50;
+ end 
+ else begin
+ clk_cnt <= clk_cnt + 1;
+ end
+ end
+end
+/*****************************************************
+** lcd_cnt를 만들고, 이를 이용하여 lcd_state도 생성
+*****************************************************/
+always @(posedge clk_50 or negedge rstb) begin
+if (!rstb) lcd_cnt <= 9'd0;
+else begin
+if (lcd_cnt == 9'b001101001)
+lcd_cnt <= lcd_cnt;
+else
+lcd_cnt <= lcd_cnt + 1;
+end
+end
+assign lcd_state = {lcd_cnt[8:1]};
+/*****************************************************
+** LCD에 글자 써 넣기
+*****************************************************/
+always @(*) begin
+case (lcd_state)
+8'h00 : lcd_db = 8'b00111000 ; // Function set
+8'h01 : lcd_db = 8'b00001000; // Display OFF
+8'h02 : lcd_db = 8'b00000001; // Display clear
+8'h03 : lcd_db = 8'b00000110; // Entry mode set
+8'h04 : lcd_db = 8'b00001100; // Display ON
+8'h05 : lcd_db = 8'b00000011; // Return Home
+8'h06 : lcd_db = 8'h4C; // L
+8'h07 : lcd_db = 8'h49; // I
+8'h08 : lcd_db = 8'h42; // B
+8'h09 : lcd_db = 8'h45; // E
+8'h0A : lcd_db = 8'h52; // R
+8'h0B : lcd_db = 8'h54; // T
+8'h0C : lcd_db = 8'h52; // R
+8'h0D : lcd_db = 8'h4F; // O
+8'h0E : lcd_db = 8'h4E; // N
+8'h0F : lcd_db = 8'h20; // 공백
+8'h10 : lcd_db = 8'h43; // C
+8'h11 : lcd_db = 8'h6F; // o
+8'h12 : lcd_db = 8'h20; // 공백
+8'h13 : lcd_db = 8'h4C; // L
+
+8'h14 : lcd_db = 8'h74; // t
+8'h15 : lcd_db = 8'h64; // d
+8'h16 : lcd_db = 8'hC0; // Change Line
+8'h17 : lcd_db = 8'h46; // F
+8'h18 : lcd_db = 8'h50; // P
+8'h19 : lcd_db = 8'h47; // G
+8'h1A : lcd_db = 8'h41; // A
+8'h1B : lcd_db = 8'h20; // 공백
+8'h1C : lcd_db = 8'h53; // S
+8'h1D : lcd_db = 8'h74; // t
+8'h1E : lcd_db = 8'h61; // a
+8'h1F : lcd_db = 8'h74; // t
+8'h20 : lcd_db = 8'h65; // e
+8'h21 : lcd_db = 8'h72; // r
+8'h22 : lcd_db = 8'h20; // 공백
+8'h23 : lcd_db = 8'h4B; // K
+8'h24 : lcd_db = 8'h69; // i
+8'h25 : lcd_db = 8'h74; // t
+8'h26 : lcd_db = 8'h33; // 3
+/*****************************************************
+ 쓰인 글자를 전체적으로 Display OFF와 ON을 반복
+ *****************************************************/
+ 8'h27 : lcd_db = 8'h08; // Display Off
+ 8'h28 : lcd_db = 8'h08; // Display Off
+ 8'h29 : lcd_db = 8'h08; // Display Off
+ 8'h2A : lcd_db = 8'h08; // Display Off
+ 8'h2B : lcd_db = 8'h0C; // Display On
+ 8'h2C : lcd_db = 8'h0C; // Display On
+ 8'h2D : lcd_db = 8'h0C; // Display On
+ 8'h2E : lcd_db = 8'h0C; // Display On
+
+ 8'h2F : lcd_db = 8'h08; // Display Off
+ 8'h30 : lcd_db = 8'h08; // Display Off
+ 8'h31 : lcd_db = 8'h08; // Display Off
+ 8'h32 : lcd_db = 8'h08; // Display Off
+
+ 8'h33 : lcd_db = 8'h0C; // Display On
+ 8'h34 : lcd_db = 8'h0C; // Display On
+
+ default : lcd_db = 8'h00; // null
+ endcase;
+end 
+
+/*****************************************************
+** LCD Control
+*****************************************************/
+
+assign lcd_rw = 1'b0 ; // write mode
+assign lcd_e = lcd_cnt[0]; // lcd_cnt[0]가 0,1을 반복하는 것을 E 신호에 활용
+// lcd_stata 가 0에서 5까지와 16, 그리고 27에서 34까지만 rs=0 (명령어),
+// 그 외는 rs=1(데이터)
+assign lcd_rs = ( (lcd_state >= 8'h00 && lcd_state <= 8'h05) ||
+ (lcd_state == 8'h16)
+ || (lcd_state >= 8'h27 && lcd_state <= 8'h34) )? 1'b0 : 1'b1 ;
+assign lcd_d = lcd_db ; // lcd data (명령어 및 데이터 모두)
+endmodule
