@@ -1,0 +1,37 @@
+// verilog source
+
+module ha(a, b, sum, cout);
+    input a, b;
+    output sum, cout;
+    wire cout_bar;
+    
+    xor(sum, a, b);
+    nand(cout_bar, a, b);
+    not(cout, cout_bar);
+    
+endmodule
+
+
+// test bench
+
+module ha_tb();
+    reg a, b;
+    wire sum, cout;
+    
+    ha uut(
+        .a(a),
+        .b(b),
+        .sum(sum),
+        .cout(cout)
+        );
+        
+     initial begin
+        a=0; b=0;
+        #1000 $stop;
+     end
+     
+     always #50 a=~a;
+     always #100 b=~b;
+     
+endmodule
+
