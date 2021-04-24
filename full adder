@@ -92,7 +92,7 @@ module fulladder1(a, b, carry_in, sum, carry_out);
     
     assign d_in = {x, y, c_in};
     assign carry_out = d_out[1];
-    assign sum_out =nd_out[0];
+    assign sum = d_out[0];
     
     always@(d_in)
         case(d_in)
