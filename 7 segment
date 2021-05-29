@@ -1,0 +1,66 @@
+module test_seg(
+    input clk,
+    input rstb,
+    output reg [7:0] seg,
+    output [3:0] digit  );
+
+reg [24:0] tmp;
+reg       i_clk;
+reg [3:0] seg_cnt;
+
+assign digit = 4'b1111;
+
+
+always@(posedge clk) begin
+    if (!rstb) begin
+       tmp   <= 0;
+       i_clk <= 0;
+       end
+       else begin
+       if ( tmp == 25'h17D7840) begin
+            tmp <= 0;
+            i_clk <= ~i_clk;
+            end
+            else begin
+            tmp <= tmp + 1;
+            i_clk <= i_clk;
+            end
+         end
+     end
+
+always@(posedge i_clk) begin
+    if (!rstb) begin
+       seg_cnt   <= 0;
+       end
+       else begin
+       if ( seg_cnt == 4'b1111) begin
+            seg_cnt <= 0;
+            end
+            else begin
+            seg_cnt <= seg_cnt + 1;
+            end
+         end
+     end
+
+   always @(posedge i_clk) begin
+      case (seg_cnt)
+          4'b0001 : seg = ~8'b01111001;   // 1
+          4'b0010 : seg = ~8'b00100100;   // 2
+          4'b0011 : seg = ~8'b00110000;   // 3
+          4'b0100 : seg = ~8'b00011001;   // 4
+          4'b0101 : seg = ~8'b00010010;   // 5
+          4'b0110 : seg = ~8'b00000010;   // 6
+          4'b0111 : seg = ~8'b01111000;   // 7
+          4'b1000 : seg = ~8'b00000000;   // 8
+          4'b1001 : seg = ~8'b00010000;   // 9
+          4'b1010 : seg = ~8'b00001000;   // A
+          4'b1011 : seg = ~8'b00000011;   // b
+          4'b1100 : seg = ~8'b01000110;   // C
+          4'b1101 : seg = ~8'b00100001;   // d
+          4'b1110 : seg = ~8'b00000110;   // E
+          4'b1111 : seg = ~8'b00001110;   // F
+          default : seg = ~8'b01000000;   // 0
+      endcase
+    end
+     
+endmodule
