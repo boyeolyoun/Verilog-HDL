@@ -83,7 +83,7 @@ end
 /*****************************************************
 ** 솔 음을 위한 주파수 생성 (196.0016 Hz) 100M 를 51,020분주
 *****************************************************/
-always @(posedge clk or ) begin 
+always @(posedge clk) begin 
    if (!sw_right) begin
       clk_cnt4   <=  18'd0;
       buzz_tmp[3] <= 0;  end
