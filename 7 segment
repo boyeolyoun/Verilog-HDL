@@ -64,3 +64,29 @@ always@(posedge i_clk) begin
     end
      
 endmodule
+
+
+############### test bench code
+
+module tb_seg7;
+
+reg rstb;
+reg clk;
+
+wire [7:0]      digit      ;
+wire [7:0]      seg_data   ;
+
+seg7 u0 (
+ .rstb     (rstb), 
+ .clk      (clk), 
+ .digit    (digit), 
+ .seg_data (seg_data) );
+
+initial begin
+rstb = 0; clk  = 0;  #100;
+rstb = 1;  #10000000;
+end
+
+always #10 clk = ~clk;
+
+endmodule
