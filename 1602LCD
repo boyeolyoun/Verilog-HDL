@@ -137,3 +137,33 @@ assign lcd_rs = ( (lcd_state >= 8'h00 && lcd_state <= 8'h05) ||
  || (lcd_state >= 8'h27 && lcd_state <= 8'h34) )? 1'b0 : 1'b1 ;
 assign lcd_d = lcd_db ; // lcd data (명령어 및 데이터 모두)
 endmodule
+
+
+##### test Bench
+
+module tb_clcd;
+
+reg  clk ;
+reg  rstb;
+
+wire [7:0]  lcd_d  ;
+wire        lcd_rs ;
+wire        lcd_rw ;
+wire        lcd_e  ;     
+
+clcd u0 (
+   .clk     (clk),
+   .rstb    (rstb),
+   .lcd_d   (lcd_d),
+   .lcd_rs  (lcd_rs),
+   .lcd_rw  (lcd_rw),
+   .lcd_e   (lcd_e)   );     
+
+initial begin
+rstb = 0; clk  = 0;  #500;
+rstb = 1;  #1000000000;
+end
+
+always #5 clk = ~clk;
+
+endmodule
