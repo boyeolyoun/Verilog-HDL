@@ -32,7 +32,7 @@ reg    [4:0]  buzz_tmp = 5'b00000;
 /*****************************************************
 ** 도 음을 위한 주파수 생성 (130.8147 Hz) 100M 를 76,444분주
 *****************************************************/
-always @(posedge clk or posedge sw_down) begin 
+always @(posedge clk) begin 
    if (!sw_down) begin
       clk_cnt1    <=  18'd0;
       buzz_tmp[0] <= 0;  end
@@ -49,7 +49,7 @@ end
 /*****************************************************
 ** 레 음을 위한 주파수 생성 (146.8343 Hz) 100M 를 68,104분주
 *****************************************************/
-always @(posedge clk or posedge sw_left) begin 
+always @(posedge clk) begin 
    if (!sw_left) begin
       clk_cnt2   <=  18'd0;
       buzz_tmp[1] <= 0;  end
@@ -66,7 +66,7 @@ end
 /*****************************************************
 ** 미 음을 위한 주파수 생성 (164.8152 Hz) 100M 를 60,674분주
 *****************************************************/
-always @(posedge clk or posedge sw_mid) begin 
+always @(posedge clk) begin 
    if (!sw_mid) begin
       clk_cnt3   <=  18'd0;
       buzz_tmp[2] <= 0;  end
@@ -83,7 +83,7 @@ end
 /*****************************************************
 ** 솔 음을 위한 주파수 생성 (196.0016 Hz) 100M 를 51,020분주
 *****************************************************/
-always @(posedge clk or posedge sw_right) begin 
+always @(posedge clk or ) begin 
    if (!sw_right) begin
       clk_cnt4   <=  18'd0;
       buzz_tmp[3] <= 0;  end
@@ -100,7 +100,7 @@ end
 /*****************************************************
 ** 라 음을 위한 주파수 생성 (220.0026 Hz) 100M 를 45,454분주
 *****************************************************/
-always @(posedge clk or posedge sw_up) begin 
+always @(posedge clk) begin 
    if (!sw_up) begin
       clk_cnt5   <=  18'd0;
       buzz_tmp[4] <= 0;  end
