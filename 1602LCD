@@ -121,7 +121,7 @@ case (lcd_state)
  8'h34 : lcd_db = 8'h0C; // Display On
 
  default : lcd_db = 8'h00; // null
- endcase;
+ endcase
 end 
 
 /*****************************************************
