@@ -1,0 +1,383 @@
+#### top module
+
+module digital_watch_01(clk, reset,push1,push2,push3,digit,seg, led);
+input clk;
+input reset;
+input push1;
+input push2;
+input push3;
+output reg [5:0] digit;
+output reg [6:0] seg;
+output reg [3:0] led;
+wire tmp_reset;
+reg tmp_second_reset ;
+wire tmp_push1;
+wire tmp_push2;
+wire tmp_push3;
+wire tmp_clk_1KHz, tmp_clk_100Hz;
+wire timp_1sec_mux_in;
+wire tmp_1min_mux_in;
+wire tmp_1hour_mux_in;
+reg tmp_1sec_mux_out;
+reg tmp_1min_mux_out ;
+reg tmp_1hour_mux_out ;
+wire [2:0] sel;
+wire [6:0] seg1, seg2, seg3;
+wire [6:0] seg4, seg5, seg6;
+wire [5:0] tmp_int_second;
+wire [5:0] tmp_int_minute;
+wire [5:0] tmp_int_hour;
+integer time_modify_mode_select;
+//--------------------------------------------------
+TimeBase_Gen2 u1_1KHz (
+.clk (clk), 
+.reset (reset), //system reset
+.clk_out (tmp_clk_1KHz) //1KHz output for debounce, mux
+);
+TimeBase_Gen2 #( .main_clk(50000000), .output_freq(1))
+u1_1Hz (
+.clk (clk), 
+.reset (reset), 
+.clk_out (tmp_1sec_mux_in) //1Az output for stopwatch
+);
+TimeBase_Gen2 #( .main_clk(50000000), .output_freq(100) )
+u1_100Hz (
+.clk (clk), 
+.reset (reset), //system reset
+.clk_out (tmp_clk_100Hz) //1Hz output for stopwatch
+);
+debounce u2 (
+.clk (tmp_clk_1KHz),
+.reset (reset),
+.sw1_in (push1),
+.sw1_out (tmp_push1)
+);
+debounce u3 (
+.clk (tmp_clk_1KHz),
+.reset (reset),
+.sw1_in (push2),
+.sw1_out (tmp_push2)
+);
+debounce u4 (
+.clk (tmp_clk_1KHz),
+.reset (reset),
+.sw1_in (push3),
+.sw1_out (tmp_push3)
+);
+// time modify mode
+always@ (negedge tmp_reset, posedge tmp_push2) begin
+if (tmp_reset == 1'b0)
+time_modify_mode_select <=0;
+else begin
+if(time_modify_mode_select == 3)
+time_modify_mode_select <= 0;
+else
+time_modify_mode_select <= time_modify_mode_select + 1;
+end
+end
+assign tmp_reset = ~tmp_push1 & reset;
+always@(time_modify_mode_select, tmp_push3, tmp_1sec_mux_in, tmp_1min_mux_in,
+tmp_1hour_mux_in)
+begin
+case(time_modify_mode_select)
+0 : begin
+tmp_second_reset <=1'b1;
+tmp_1sec_mux_out <= tmp_1sec_mux_in;
+tmp_1min_mux_out <= tmp_1min_mux_in;
+tmp_1hour_mux_out <= tmp_1hour_mux_in;
+led <= 4'b0000;
+end
+1 : begin
+tmp_second_reset <= 1'b1;
+tmp_1sec_mux_out <= 1'b0;
+tmp_1min_mux_out <= 1'b0;
+tmp_1hour_mux_out <= tmp_push3;
+led <= 4'b0001;
+end
+2 : begin
+tmp_second_reset <= 1'b1;
+tmp_1sec_mux_out <= 1'b0;
+tmp_1min_mux_out <= tmp_push3;;
+tmp_1hour_mux_out <= 1'b0;
+led <= 4'b0010;
+end
+3 : begin
+tmp_second_reset <= tmp_push3;
+tmp_1sec_mux_out <= 1'b0;
+tmp_1min_mux_out <= 1'b0;
+tmp_1hour_mux_out <= 1'b0;
+led <= 4'b0011;
+end
+default : begin
+tmp_second_reset <= 1'b1;
+tmp_1sec_mux_out <= tmp_1sec_mux_in;
+tmp_1min_mux_out <= tmp_1min_mux_in;
+tmp_1hour_mux_out <= tmp_1hour_mux_in;
+led <= 4'b0000;
+end
+endcase
+end
+counter second_counter (
+.reset (tmp_second_reset),
+.clk_in (tmp_1sec_mux_out),
+.q (tmp_int_second),
+.clk_out (tmp_1min_mux_in)
+);
+int2seg2 second_output (
+.reset (tmp_reset),
+.int_value (tmp_int_second),
+.seg_10 (seg5),
+.seg_01 (seg6)
+);
+counter minute_counter (
+.reset (tmp_reset),
+.clk_in (tmp_1min_mux_out),
+.q (tmp_int_minute),
+.clk_out (tmp_1hour_mux_in)
+);
+int2seg2 minute_output (
+.reset (tmp_reset),
+.int_value (tmp_int_minute),
+.seg_10 (seg3),
+.seg_01 (seg4)
+);
+counter #( .cnt_value(24))
+hour_counter (
+.reset (tmp_reset),
+.clk_in (tmp_1hour_mux_out),
+.q (tmp_int_hour),
+.clk_out ()
+);
+int2seg2 hour_output (
+.reset (tmp_reset),
+.int_value (tmp_int_hour),
+.seg_10 (seg1),
+.seg_01 (seg2)
+);
+Cnt_OneToSix u5(
+.clk (tmp_clk_1KHz),
+.reset (tmp_reset),
+.value (sel)
+);
+always@(sel, seg1, seg2, seg3, seg4, seg5, seg6) begin
+if (sel == 1) begin
+digit <= 6'b00_0001; seg <= seg1;
+end
+if (sel == 2) begin
+digit <= 6'b00_0010; seg <=seg2;
+end
+if (sel == 3) begin
+digit <= 6'b00_0100; seg <=seg3;
+end
+if (sel == 4) begin
+digit <= 6'b00_1000; seg <=seg4;
+end
+if (sel == 5) begin
+digit <= 6'b01_0000; seg <=seg5;
+end
+if (sel == 6) begin
+digit <= 6'b10_0000; seg <=seg6;
+end
+end
+endmodule
+
+
+
+### (2) 분주회로 코드
+분주 회로의 Verilog 코드이다. 분주회로는 높은 주파수를 낮은 주파수로 바꿔준다. 디지
+털 시계는 초 단위를 기준으로 설계하기 때문에 1Hz분주 회로가 필요하다.
+
+
+module digital_watch(clk, reset, clk_out);
+parameter main_clk=50000000, output_freq=1000;
+parameter clk_hilow_cnt_value=((main_clk/output_freq)/2)-1;
+input clk;
+input reset;
+output reg clk_out;
+integer clk_cnt;
+always@(negedge reset, posedgeclk) begin
+if(reset == 1'b0)begin
+clk_cnt <=0;
+clk_out <=1'b0;
+end else begin
+if(clk_cnt==clk_hilow_cnt_value)begin
+clk_cnt <=0;
+clk_out <= ~clk_out;
+end else
+clk_cnt <=clk_cnt+1;
+end
+end
+endmodule
+
+
+### (3) Debounce 회로
+Debounce 블록의 Verilog 코드이다. 이 회로는 push 스위치, Dip 스위치 등의 기계적인
+동작을 전기 신호로 바꿀 경우에 기계적인 떨림 동작이 전기 신호 그대로 나타나는 현상을
+bouncing이라고 한다. 이러한 떨림 현상을 제거하기 위하여 Debounce 블록을 사용한다.
+
+
+module debounce(clk, reset, sw1_in, sw1_out);
+input clk;
+input reset;
+input sw1_in;
+output reg sw1_out;
+reg tmp_sw1;
+always@(negedge reset, negedge clk)begin
+if(!reset)begin
+sw1_out <=1'b1;
+tmp_sw1 <=1'b1;
+end else begin
+tmp_sw1 <=sw1_in;
+sw1_out <= tmp_sw1;
+end
+end
+endmodule
+
+
+### (4) 계수기 코드
+계수기 블록의 Verilog 코드이다. 이 코드는 초와 분에 사용될 0 – 59 계수기, 0 – 23 계수
+기의 설계에 사용된다.
+
+
+module counter(reset, clk_in, q, clk_out);
+parameter integer cnt_value=60;
+input reset;
+input clk_in;
+output reg[6:0]q;
+output reg clk_out;
+always@(negedge reset, posedge clk_in)begin
+if(!reset)begin
+q <= 0;
+clk_out <=0;
+end else begin
+if(q==(cnt_value-1))begin
+q <=0;
+clk_out <=1'b1;
+end else begin
+q <=q+1;
+clk_out <=1'b0;
+end
+end
+end
+endmodule
+
+
+
+#### (5) 세그먼트 블록
+세그먼트 블록의 Verilog 코드이다. 이 코드는 계수기의 출력을 BCD 코드로 표시하기 위
+해 사용된 블록이다. FSK III 보드의 8개의 세크먼트 LED는 digit의 출력 설정으로 세그먼
+트 on/off 작동을 실행하고 8개의 세그먼트 LED는 서로 연결이 되어 있어 디코더를 사용
+하더라도 같은 숫자가 나온다. 예를 들어 세그먼트 8개 세그먼트의 상단 SEG_A는 서로
+연결이 되어있어 SEA_A 신호에 ‘1’ 값을 주면 8개 세그먼트의 상단 LED에 불이 켜지게
+된다. 이를 해결하기 위해서 세그먼트 블록은 0 –99의 정수를 십의 자리 숫자와 일의 자리
+숫자로 구현해주고 동적 방식의 스캔 체인 방법을 사용하여 6개의 세그먼트에 다른 숫자가
+나타나도록 한다. 아래 코드는 if 문구를 사용하여 정수의 입력이 90보다 클 때, 십의 자리
+숫자는 9로 표시되고, 일의 자리 숫자는 정수에서 90을 뺀 숫자로 표시된다. 이러한 코드
+유형으로 0 – 99 까지의 정수를 BCD 코드로 변환하고 BCD 코드를 다시 세그먼트로 표시
+한다.
+
+
+module int2seg2(reset, int_value, seg_10, seg_01);
+input reset;
+input [6:0] int_value;
+output [6:0] seg_10;
+output [6:0] seg_01;
+reg[3:0] dec_10;
+reg[3:0] dec_01;
+always@(reset, int_value)begin
+if(reset == 1'b0) begin
+dec_10 <= 0;
+dec_01 <= 0;
+end else if(int_value>=90)begin
+dec_10 <= 9; dec_01 <= int_value- 90;
+end else if(int_value>=80)begin
+dec_10 <= 8; dec_01 <= int_value-80;
+end else if(int_value>=70)begin
+dec_10 <= 7; dec_01 <= int_value-70;
+end else if(int_value>=60)begin
+dec_10 <= 6; dec_01 <= int_value-60;
+end else if(int_value>=50)begin
+dec_10 <= 5; dec_01 <= int_value-50; 
+end else if(int_value>=40)begin
+dec_10 <= 4; dec_01 <= int_value-40;
+end else if(int_value>=30)begin
+dec_10 <= 3; dec_01 <= int_value-30;
+end else if(int_value>=20)begin
+dec_10 <= 2; dec_01 <= int_value-20;
+end else if(int_value>=10)begin
+dec_10 <= 1; dec_01 <= int_value-10; 
+end else begin
+dec_10 <= 0; dec_01 <= int_value;
+end
+end
+int2seg1 seg_10_ten (.int(dec_10), .seg(seg_10));
+int2seg1 seg_01_one (.int(dec_01), .seg(seg_01)); 
+endmodule
+
+
+### (6) BCD-to-세그먼트 코드
+BCD-to-세그먼트 변환 코드이다. 이 코드는 BCD의 입력을 세그먼트로 표시하는 코드이다. 
+세그먼트 블록에서 생성된 십의 자리 숫자와 일의 자리 숫자를 세그먼트로 표시하는 코드
+이다.
+
+
+module int2seg1 (int, seg);
+input [3:0] int;
+output reg[6:0] seg;
+always@(int) begin
+if(int==0) seg<=7'b100_0000;
+else if(int==1) seg<=7'b111_1001;
+else if(int==2) seg<=7'b010_0100;
+else if(int==3) seg<=7'b011_0000;
+else if(int==4) seg<=7'b001_1001;
+else if(int==5) seg<=7'b001_0010;
+else if(int==6) seg<=7'b000_0010;
+else if(int==7) seg<=7'b111_1000;
+else if(int==8) seg<=7'b000_0000;
+else seg<=7'b001_1000;
+end
+endmodule
+
+#### (7) One-to-Six 계수기 코드
+One-to-Six 계수기 코드이다. 이 코드는 동적 방식의 스캔 체인 방법을 사용하여 6개의
+세그먼트가 동시에 다른 숫자가 나타나도록 한다.
+
+
+module Cnt_OneToSix(clk, reset, value);
+input clk;
+input reset;
+output reg [2:0] value;
+always@(negedge reset, posedge clk) begin
+if(!reset)
+value<=1;
+else begin
+if(value ==6)
+value <=value + 1;
+end
+end
+endmodule
+
+####
+신호이름 임/출력 장치 종류 키트 이름 핀 번호
+clk 입력 clock input clock R4
+rst 입력 PUSH 스위치 reset_sw U7
+push1 입력 PUSH 스위치 PUSH_SW_UP M20
+push2 입력 PUSH 스위치 PUSH_SW_LEFT N20
+push3 입력 PUSH 스위치 PUSH_SW_DOUM N22
+led[3] 출력 LED LD1 Y18
+led[2] 출력 LED LD2 AA18
+led[1] 출력 LED LD3 AB18
+led[0] 출력 LED LD4 W19
+digit[5] 출력 SEGMENT digit6 N17
+digit[4] 출력 SEGMENT digit5 R16
+digit[3] 출력 SEGMENT digit4 P16
+digit[2] 출력 SEGMENT digit3 P15
+digit[1] 출력 SEGMENT digit2 R14
+digit[0] 출력 SEGMENT digit1 P14
+seg[6] 출력 SEGMENT SEG_G V18
+seg[5] 출력 SEGMENT SEG_F U18
+seg[4] 출력 SEGMENT SEG_E T18
+seg[3] 출력 SEGMENT SEG_D R18
+seg[2] 출력 SEGMENT SEG_C W17
+seg[1] 출력 SEGMENT SEG_B V17
+seg[0] 출력 SEGMENT SEG_A U17
