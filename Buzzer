@@ -37,7 +37,6 @@ always @(posedge clk) begin
       clk_cnt1    <=  18'd0;
       buzz_tmp[0] <= 0;  end
    else begin
-//      if (clk_cnt1 == 18'd1) begin   // 시뮬레이션시 선택
       if (clk_cnt1 == 18'd38221) begin  
          clk_cnt1     <= 18'd0;
          buzz_tmp[0] <= ~buzz_tmp[0]; end
@@ -54,8 +53,7 @@ always @(posedge clk) begin
       clk_cnt2   <=  18'd0;
       buzz_tmp[1] <= 0;  end
    else begin
-      if (clk_cnt2 == 18'd34051) begin
-//      if (clk_cnt2 == 18'd1) begin    
+      if (clk_cnt2 == 18'd34051) begin  
          clk_cnt2     <= 18'd0;
          buzz_tmp[1] <= ~buzz_tmp[1]; end
       else 
@@ -71,9 +69,8 @@ always @(posedge clk) begin
       clk_cnt3   <=  18'd0;
       buzz_tmp[2] <= 0;  end
    else begin
-      if (clk_cnt3 == 18'd30336) begin
-      if (clk_cnt3 == 18'd1) begin    
-//         clk_cnt3     <= 18'd0;
+      if (clk_cnt3 == 18'd30336) begin  
+         clk_cnt3     <= 18'd0;
          buzz_tmp[2] <= ~buzz_tmp[2]; end
       else 
          clk_cnt3     <= clk_cnt3 + 1;
@@ -88,8 +85,7 @@ always @(posedge clk) begin
       clk_cnt4   <=  18'd0;
       buzz_tmp[3] <= 0;  end
    else begin
-      if (clk_cnt4 == 18'd25509) begin
-  //    if (clk_cnt4 == 18'd1) begin    
+      if (clk_cnt4 == 18'd25509) begin  
          clk_cnt4     <= 18'd0;
          buzz_tmp[3] <= ~buzz_tmp[3]; end
       else 
@@ -106,8 +102,8 @@ always @(posedge clk) begin
       buzz_tmp[4] <= 0;  end
    else begin
       if (clk_cnt5 == 18'd22726) begin
-      if (clk_cnt5 == 18'd1) begin   
- //        clk_cnt5     <= 18'd0;
+        
+         clk_cnt5     <= 18'd0;
          buzz_tmp[4] <= ~buzz_tmp[4]; end
       else 
          clk_cnt5     <= clk_cnt5 + 1;
