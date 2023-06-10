@@ -195,7 +195,7 @@ input clk;
 input reset;
 output reg clk_out;
 integer clk_cnt;
-always@(negedge reset, posedgeclk) begin
+always@(negedge reset, posedge clk) begin
 if(reset == 1'b0)begin
 clk_cnt <=0;
 clk_out <=1'b0;
