@@ -188,7 +188,7 @@ endmodule
 털 시계는 초 단위를 기준으로 설계하기 때문에 1Hz분주 회로가 필요하다.
 
 
-module digital_watch(clk, reset, clk_out);
+module  TimeBase_Gen2(clk, reset, clk_out);
 parameter main_clk=50000000, output_freq=1000;
 parameter clk_hilow_cnt_value=((main_clk/output_freq)/2)-1;
 input clk;
