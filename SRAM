@@ -1,0 +1,508 @@
+FPGA Starter Kit III 
+SRAM Tutorial
+
+본 문서에서는 SRAM 의 동작을 이해하고, SRAM 의 동작 확인을 위한 로직
+블록을 설계 및 다운로드 하는 법을 기술 한다.
+
+본 자료는 FSK III 에 장착되어 있는 128K x 8bit, 128KB 용량의 SRAM (Async) 
+을 기반으로 제작 되었다.
+⚫ FPGA 외부에 장착되어 있는 SRAM 특성상, Vivado 에서 Simulation 진행을
+할 수 없어, FSM (Finite State Machine) 을 이용하여 디자인 하였다.
+SRAM (Async) 동작이 완료되면 FSK III 에 있는 LED 가 켜지도록 디자인 되었
+으며, Dip Switch 로 이를 확인할 수 있다
+
+SRAM DATA SHEET : 62WV1288ALL-258449.pdf
+
+
+mem_test.v +++++++++++++++++++
+기본적으로 SRAM 테스트 조건 (IDLE, Write, Read 조건) 등의
+Test 환경을 생성하여 Dip SW 에서 Test 시작입력을 받으면
+sram_byte_ctrl 블록에 SRAM addr 및 data를 전달하고 data를
+다시 받아, SRAM 에 정상적으로 저장되었는지 확인한다.
+동작 확인 결과에 따라, LED (LD1) 또는 LED (LD3)가 켜지게 된다.
+
+sram_byte_ctrl.v ++++++++++++++++++++
+기본적으로 SRAM Memory 를 컨트롤하는 Signal을 생성하며,
+SRAM Memory 에 Write/Read 한 정보를 mem_test 에 전달하여
+mem_test 블록에서 SRAM Memory 에 정상적으로 데이터가 Write 
+되었는지 판단하게 한다.
+
+
+test_sram_top.v 디자인 입력
+SRAM 를 동작시키기 위한 test_sram_top.v 디자인으로,
+ mem_test.v , sram_byte_ctrl.v 을 연결하여 전체 디자인을 기능에 맞게 연결하는
+ 역할을 한 디자인 블록이다.
+
+===============================
+
+module sram_test_top
+(/*****************************************************
+** Input Signal Define **
+*****************************************************/
+input wire clk ,
+input wire rstb ,
+input wire test_start ,
+/*****************************************************
+** Output Signal Define **
+*****************************************************/ 
+output wire test_end ,
+output wire test_error ,
+output wire cs1_b ,
+output wire cs2 ,
+output wire oe_b ,
+output wire we_b ,
+output wire [16:0] sram_a ,
+inout wire [07:0] sram_d );
+/*****************************************************
+** Wire Definition **
+*****************************************************/
+// Memory Test Block Signal
+wire [07:0] data_read ;
+wire [07:0] data_write ;
+wire [16:0] data_addr ;
+wire write_valid ;
+wire read_valid ;
+wire write_done ;
+wire read_done ;
+/*****************************************************
+** Memory Test Block
+*****************************************************/
+mem_test
+#(.DATA_WIDTH ( 8),
+.ADDR_WIDTH ( 17),
+.DATA_NUM ( 128*1024-1) )
+u_mem_test
+( .clk (clk ),
+.rstb (rstb ),
+.data_read (data_read ),
+.write_done (write_done ),
+.read_done (read_done ),
+.test_start (test_start ),
+.data_write (data_write ),
+.data_addr (data_addr ),
+.write_valid (write_valid ),
+.read_valid (read_valid ),
+.test_end (test_end ),
+.test_error (test_error ) );
+/*****************************************************
+** SRAM Control Block
+*****************************************************/
+sram_byte_ctrl
+u_sram_byte_ctrl
+( .clk (clk ),
+.rstb (rstb ),
+.write_valid (write_valid ),
+.read_valid (read_valid ),
+.addr_in (data_addr ),
+.data_in (data_write ),
+.cs1_b (cs1_b ),
+.cs2 (cs2 ),
+.oe_b (oe_b ),
+.we_b (we_b ),
+.sram_a (sram_a ),
+.sram_d (sram_d ),
+.data_out (data_read ),
+.write_done (write_done ),
+.read_done (read_done ) );
+endmodule
+
+mem_test.v 디자인 입력
+ SRAM Memory 를 테스트하기 위한 IDLE, WRITE, INIT_READ, READ, TEST_DONE, 
+RESTART_TEST 상태 등을 Parameter value 로 정의한 로직 이다.
+차후 여기에 정의된 value 를 기반으로 FSM (Finite State Machine)을 활용하여 SRAM을
+테스트하는 로직이 동작한다.
+=================================
+
+module mem_test
+#(
+parameter DATA_WIDTH = 8 ,
+parameter ADDR_WIDTH = 16 ,
+parameter DATA_NUM = 128
+)
+(
+/*****************************************************
+** Input Signal Define **
+*****************************************************/
+input wire clk ,
+input wire rstb ,
+input wire [DATA_WIDTH-1:0] data_read ,
+input wire write_done ,
+input wire read_done ,
+input wire test_start ,
+/*****************************************************
+** Output Signal Define **
+*****************************************************/ 
+output wire [DATA_WIDTH-1:0] data_write ,
+output wire [ADDR_WIDTH-1:0] data_addr ,
+output reg write_valid ,
+output reg read_valid ,
+output reg test_end ,
+output reg test_error );
+reg [ADDR_WIDTH-1:0] test_error_cnt;
+/*****************************************************
+** Parameter Definition **
+*****************************************************/
+localparam IDLE = 6'b000001;
+localparam WRITE = 6'b000010;
+localparam INIT_READ = 6'b000100;
+localparam READ = 6'b001000;
+localparam TEST_DONE = 6'b010000;
+localparam RESTART_TEST = 6'b100000;
+/*****************************************************
+** Wire Definition **
+*****************************************************/
+wire test_start_r ;
+/*****************************************************
+** Reg Definition **
+*****************************************************/
+reg [05:0] cs, ns ;
+reg [01:0] test_start_d ;
+reg [ADDR_WIDTH-1:0] data_cnt ;
+reg [ADDR_WIDTH-1:0] data_cnt_buf ;
+reg [DATA_WIDTH-1:0] data_read_buf ;
+reg write_done_buf ;
+reg read_done_buf ;
+/**********************************************************************
+-- Test Start Edge Detect
+**********************************************************************/
+always @(posedge clk or negedge rstb) begin
+if (!rstb) begin
+ test_start_d <= 2'd0;
+ end
+ else begin
+ test_start_d <= {test_start_d[0], test_start};
+ end
+end
+assign test_start_r = (test_start_d == 2'b01);
+/**********************************************************************
+-- Done Signal Buffering
+**********************************************************************/
+always @(posedge clk or negedge rstb) begin
+ if (!rstb) begin
+ write_done_buf <= 1'b0;
+ read_done_buf <= 1'b0;
+ end
+ else begin
+ write_done_buf <= write_done;
+ read_done_buf <= read_done;
+ end
+end
+/**********************************************************************
+-- Memory Test COM FSM
+**********************************************************************/
+always @( * ) begin
+ case ( cs )
+ IDLE : if (test_start_r) begin 
+ ns = WRITE;
+ end
+ else begin 
+ ns = IDLE;
+ end 
+/****************************************************************/ 
+ WRITE: if ((data_cnt == DATA_NUM-1) && write_done_buf) begin
+ ns = INIT_READ;
+ end
+ else begin
+ ns = WRITE;
+ end 
+/****************************************************************/ 
+ INIT_READ : ns = READ;
+/****************************************************************/ 
+ READ : if ((data_cnt == DATA_NUM-1) && read_done_buf) begin
+ ns = TEST_DONE;
+end
+ else begin
+ ns = READ;
+ end 
+ 
+/****************************************************************/ 
+ TEST_DONE : if (test_start_r) begin 
+ ns = RESTART_TEST;
+ end
+ else begin 
+ ns = TEST_DONE;
+ end 
+/****************************************************************/ 
+ RESTART_TEST: ns = WRITE; 
+/****************************************************************/ 
+ default : ns = IDLE;
+ endcase
+end
+/********************************************************************
+// Memory Test SEQ FSM 
+**********************************************************************/
+always @(posedge clk or negedge rstb) begin
+ if (!rstb) begin
+cs <= IDLE;
+ data_cnt <= 'd0;
+ data_cnt_buf <= 'd0;
+ data_read_buf <= 'd0;
+ test_error <= 1'b0;
+ test_error_cnt <= 'd0;
+ end
+ else begin
+ cs <= ns;
+/****************************************************************/ 
+ case ( ns ) 
+IDLE : begin test_end <= 1'b0; write_valid <= 1'b0; read_valid <= 1'b0; end
+ WRITE: begin test_end <= 1'b0; write_valid <= 1'b1; read_valid <= 1'b0; end
+INIT_READ : begin test_end <= 1'b0; write_valid <= 1'b0; read_valid <= 1'b0; 
+end
+ READ : begin test_end <= 1'b0; write_valid <= 1'b0; read_valid <= 1'b1; end
+ TEST_DONE : begin test_end <= 1'b1; write_valid <= 1'b0; read_valid <= 
+1'b0; end
+ default : begin test_end <= 1'b0; write_valid <= 1'b0; read_valid <= 1'b0; end
+ endcase 
+/****************************************************************/
+ if ((ns == INIT_READ) || (ns == IDLE) || (ns == RESTART_TEST)) 
+begin
+ data_cnt <= 'd0;
+end
+ else if (write_done_buf || read_done_buf) begin
+ data_cnt <= data_cnt + 'd1;
+ end 
+ data_cnt_buf <= data_cnt;
+ data_read_buf <= data_read;
+ 
+ // Error Check
+ if ((cs == INIT_READ) || (cs == RESTART_TEST)) begin
+ test_error <= 1'b0;
+ test_error_cnt <= 'd0;
+ end
+ else if ((cs == READ) && read_done_buf) begin
+ if (data_cnt_buf[DATA_WIDTH-1:0] != data_read_buf) begin
+ test_error <= 1'b1;
+ test_error_cnt <= test_error_cnt + 1;
+ end
+ end
+ end
+end 
+/****************************************************************/
+assign data_write = data_cnt[DATA_WIDTH-1:0];
+assign data_addr = data_cnt;
+endmodule
+
+sram_byte_ctrl.v 디자인 입력
+sram_byte_ctrl.v 디자인이 SRAM Memory 를 컨트롤하기 위한 블록으로,
+FSM (Finite State Machine) 으로 구성하여 동작시켰다. 여기서 FSM 의 IDLE, WRITE_OE, 
+WRITE_WE_CS, WRITE_DATA, WRITE_WE_END, READ_WE_CS, READ_OE, READ_OE_END, READ_DATA, 
+READ_DATA_SP 의 상태를 파라미터로 정의한 로직이다.
+차후, 이 부분은 “SRAM Sequence COM FSM” 디자인 부분에서 FSM 의 상태 값으로
+사용 된다.
+
+=========================================
+
+module sram_byte_ctrl
+(
+/*****************************************************
+** Input Signal Define **
+*****************************************************/
+input wire clk ,
+input wire rstb ,
+input wire write_valid ,
+input wire read_valid ,
+input wire [16:0] addr_in ,
+input wire [07:0] data_in ,
+/*****************************************************
+** Output Signal Define **
+*****************************************************/
+output reg cs1_b ,
+output reg cs2 ,
+output reg oe_b ,
+output reg we_b ,
+output wire [16:0] sram_a ,
+inout wire [07:0] sram_d ,
+output reg [07:0] data_out ,
+output wire write_done ,
+output wire read_done );
+/*****************************************************
+** Pasrameter Definition **
+*****************************************************/
+localparam IDLE = 10'b0000000001;
+localparam WRITE_OE = 10'b0000000010;
+localparam WRITE_WE_CS = 10'b0000000100;
+localparam WRITE_DATA = 10'b0000001000;
+localparam WRITE_WE_END = 10'b0000010000;
+localparam READ_WE_CS = 10'b0000100000;
+localparam READ_OE = 10'b0001000000;
+localparam READ_OE_END = 10'b0010000000;
+localparam READ_DATA = 10'b0100000000;
+localparam READ_DATA_SP = 10'b1000000000;
+/*****************************************************
+** Wire Definition **
+*****************************************************/
+wire wait_cmp ;
+/*****************************************************
+** Reg Definition **
+*****************************************************/
+reg [09:0] cs, ns ;
+reg [03:0] wait_cnt ;
+reg [03:0] wait_cnt_cmp;
+reg dir_control ;
+/**********************************************************************
+-- SRAM Sequence COM FSM
+**********************************************************************/
+always @( * ) begin
+ case ( cs )
+ IDLE : if (write_valid) begin 
+ ns = WRITE_OE;
+ end
+ else if (read_valid) begin
+ ns = READ_WE_CS;
+ end
+ else begin 
+ ns = IDLE;
+ end
+ 
+/****************************************************************/ 
+ WRITE_OE : if (wait_cmp) begin
+ns = WRITE_WE_CS;
+ end
+ else begin
+ ns = WRITE_OE;
+ end 
+/****************************************************************/ 
+ WRITE_WE_CS : if (wait_cmp) begin
+ ns = WRITE_DATA;
+ end
+ else begin
+ ns = WRITE_WE_CS;
+ end 
+/****************************************************************/ 
+ WRITE_DATA : if (wait_cmp) begin
+ ns = WRITE_WE_END;
+ end
+ else begin
+ ns = WRITE_DATA;
+ end 
+/****************************************************************/ 
+ WRITE_WE_END: if (wait_cmp) begin
+ ns = IDLE;
+ end
+ else begin
+ns = WRITE_WE_END;
+ end 
+/****************************************************************/ 
+ READ_WE_CS : if (wait_cmp) begin
+ ns = READ_OE;
+ end
+ else begin
+ ns = READ_WE_CS;
+ end 
+/****************************************************************/ 
+ READ_OE : if (wait_cmp) begin
+ ns = READ_OE_END;
+ end
+ else begin
+ ns = READ_OE;
+ end 
+/****************************************************************/ 
+ READ_OE_END : if (wait_cmp) begin
+ ns = READ_DATA;
+ end
+ else begin
+ ns = READ_OE_END;
+ end 
+/****************************************************************/
+READ_DATA : if (wait_cmp) begin
+ ns = READ_DATA_SP;
+ end
+ else begin
+ ns = READ_DATA;
+ end 
+/****************************************************************/ 
+ READ_DATA_SP: if (wait_cmp) begin
+ ns = IDLE;
+ end
+ else begin
+ ns = READ_DATA_SP;
+ end 
+/****************************************************************/ 
+ default : ns = IDLE;
+ endcase
+end
+/**********************************************************************
+// SRAM Sequence SEQ FSM 
+**********************************************************************/
+always @(posedge clk or negedge rstb) begin
+ if (!rstb) begin
+ cs <= IDLE;
+ cs1_b <= 1'b1;
+cs2 <= 1'b0;
+ oe_b <= 1'b1;
+ we_b <= 1'b1;
+ dir_control <= 1'b0;
+ data_out <= 8'd0;
+ wait_cnt <= 3'd0;
+ end
+ else begin
+ cs <= ns;
+/****************************************************************/ 
+ case ( ns ) 
+ IDLE : begin cs1_b <= 1'b1; cs2 <= 1'b0; oe_b <= 1'b1; 
+we_b <= 1'b1; dir_control <= 1'b0; data_out <= data_out; end
+ WRITE_OE : begin cs1_b <= 1'b1; cs2 <= 1'b0; oe_b <= 1'b1; 
+we_b <= 1'b1; dir_control <= 1'b0; data_out <= data_out; end
+ WRITE_WE_CS : begin cs1_b <= 1'b0; cs2 <= 1'b1; oe_b <= 1'b1; 
+we_b <= 1'b0; dir_control <= 1'b0; data_out <= data_out; end
+ WRITE_DATA : begin cs1_b <= 1'b0; cs2 <= 1'b1; oe_b <= 1'b1; 
+we_b <= 1'b0; dir_control <= 1'b1; data_out <= data_out; end
+ WRITE_WE_END: begin cs1_b <= 1'b1; cs2 <= 1'b0; oe_b <= 1'b1; 
+we_b <= 1'b1; dir_control <= 1'b0; data_out <= data_out; end
+ READ_WE_CS : begin cs1_b <= 1'b0; cs2 <= 1'b1; oe_b <= 1'b1; 
+we_b <= 1'b1; dir_control <= 1'b0; data_out <= data_out; end
+ READ_OE : begin cs1_b <= 1'b0; cs2 <= 1'b1; oe_b <= 1'b0; 
+we_b <= 1'b1; dir_control <= 1'b0; data_out <= data_out; end
+ READ_OE_END : begin cs1_b <= 1'b1; cs2 <= 1'b0; oe_b <= 1'b1; 
+we_b <= 1'b1; dir_control <= 1'b0; data_out <= data_out; end
+ READ_DATA : begin cs1_b <= 1'b1; cs2 <= 1'b0; oe_b <= 1'b1; 
+we_b <= 1'b1; dir_control <= 1'b0; data_out <= sram_d; end
+ READ_DATA_SP: begin cs1_b <= 1'b1; cs2 <= 1'b0; oe_b <= 1'b1; 
+we_b <= 1'b1; dir_control <= 1'b0; data_out <= sram_d; end
+ default : begin cs1_b <= 1'b1; cs2 <= 1'b0; oe_b <= 1'b1; 
+we_b <= 1'b1; dir_control <= 1'b0; data_out <= data_out; end
+ endcase
+/****************************************************************/ 
+ if ((cs != ns) || (ns == IDLE)) begin
+ wait_cnt <= 3'd0;
+ end
+ else begin
+ wait_cnt <= wait_cnt + 1;
+ end
+ end
+end
+/****************************************************************/
+assign sram_a = addr_in;
+assign sram_d = (dir_control == 1'b0) ? 8'hZZ : data_in;
+assign write_done = ((cs == WRITE_WE_END) && (ns == IDLE) && 
+(wait_cmp == 1'b1));
+assign read_done = ((cs == READ_DATA_SP) && (ns == IDLE) && 
+(wait_cmp == 1'b1));
+/**********************************************************************
+-- SRAM Wait Time
+**********************************************************************/
+always @(posedge clk or negedge rstb) begin
+ if (!rstb) begin
+ wait_cnt_cmp <= 3'd0;
+ end
+ else begin
+ case ( ns )
+ IDLE : wait_cnt_cmp <= 3'd0;
+ WRITE_OE : wait_cnt_cmp <= 3'd1;
+ WRITE_WE_CS : wait_cnt_cmp <= 3'd2;
+ WRITE_DATA : wait_cnt_cmp <= 3'd3;
+ WRITE_WE_END: wait_cnt_cmp <= 3'd1;
+ READ_WE_CS : wait_cnt_cmp <= 3'd1;
+ READ_OE : wait_cnt_cmp <= 3'd4;
+ READ_OE_END : wait_cnt_cmp <= 3'd1;
+ READ_DATA : wait_cnt_cmp <= 3'd1;
+ READ_DATA_SP: wait_cnt_cmp <= 3'd1;
+ default : wait_cnt_cmp <= 3'd0;
+ endcase
+ end
+end
+/****************************************************************/
+assign wait_cmp = (wait_cnt == (wait_cnt_cmp - 1));
+endmodule
+
+
