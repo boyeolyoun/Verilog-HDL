@@ -1,0 +1,143 @@
+FSK III Block Memory
+Tutorial
+이 문서에서는 FPGA 내의 Block Memory 의 동작을 이해하기 위해,
+Block Memory 의 개념을 익히고 Vivado Tool 을 통한 Simulation 을 통해 동작
+을 검증한다.
+Memory 를 구성하는 방법과 Memory 연결 핀에 대한 입력 조건을 확인하여
+차후 프로젝트에 적용함을 목표로 한다.
+
+본 자료에서의 FPGA BRAM 디자인은 FPGA Dedicate 되어 있는 Single Port BRAM을 생성하여 HDL 로 상위 디자인과 연결 시켰다.
+또한 Single Port BRAM 의 동작을 확인하기 위해 Testbench를 작성하여 Single 
+Port BRAM 이 어떻게 동작하는지 확인한다.
+- BRAM 의 이해를 위해 Xilinx 가 제공하는 pg058-blk-mem-gen.pdf 문서를
+다운로드 하여 참조 하도록 한다.
+- Xilinx FPGA 내의 BRAM 은 사용자의 목적에 따라 다양하게 구성하여 사용이
+가능하다. Xilinx Vivado SW 환경에서 IP Catalog  Basic Elements  Memory 
+Elements  Block Memory Generator ( or Distribute Memory Generator : LUT를
+활용하는 메모리) 를 실행하면 Memory 를 구성하는 창이 나타나며, 하기와 같은
+Memory Type 을 선택해 구성이 가능하다.
+
+FPGA 내의 Block Memory Type
+Single Port Memory
+하나의 a port로 clk, addr, data를 받아 저장하여
+출력 시키는 Memory
+Two Port Memory
+두 개의 컨트롤 신호 clk a/b, addr a/b 로, 하나의 a port data
+를 받아 저장하여 하나의 출력 port로 출력시키는 Memory
+True Dual Port Memory
+두 개의 컨트롤 신호 clk a/b, addr a/b 및 data a/b를 받아 저
+장하여 각각의 출력 a/b port로 출력 시키는 Memory
+FIFO
+(First Input First Output)
+처음 들어온 데이터가 처음으로 출력되는 Memory
+Single Port ROM
+Coe 파일 형태로 미리 데이터를 저장하여 하나의 a port로
+컨트롤 및 출력하여 사용하는 Memory
+Two Port ROM
+Coe 파일 형태로 미리 데이터를 저장하여 두개의 a/b port로
+각각 컨트롤 및 출력하여 사용하는 Memory
+
+BRAM 동작 Signal
+CLKA Memory Write 동작에 사용되는 Clock
+ADDRA Memory 에 저장할 어드레스
+RSTA Active High (Low 일 때 Memory 에 저장 가능)
+ENA Active High (High 일 때 Memory 에 저장/출력 가능)
+WEA Active High (High 일 때 Memory 에 데이터 출력)
+DINA Memory 에 저장하기 위한 Data
+DOUTA Memory 에서 출력되는 Data
+
+
+MAIN MODULE
+++++++++++++++++++++++++++++
+
+module test_bram(
+ input clk,
+input rsta,
+ input ena,
+ input wea,
+ input [8:0] addra,
+ input [15:0] dina,
+ output [15:0] douta,
+ output rsta_busy );
+/*****************************************************
+ ** Instance Definition **
+*****************************************************/
+bram_1 u0 (
+ .clka (clk), // input wire clka
+ .rsta (rsta), // input wire rsta 
+ .ena (ena), // input wire ena
+ .wea (wea), // input wire [0 : 0] wea
+ .addra (addra), // input wire [3 : 0] addra
+ .dina (dina), // input wire [7 : 0] dina
+ .douta (douta), // output wire [15 : 0] douta
+ .rsta_busy (rsta_busy ) ); // output wire rsta_busy 
+endmodule
+
+
+Test Bench
++++++++++++++++++++++++++++++++++++++
+module tb_test_bram();
+reg clk;
+reg rsta;
+reg ena;
+reg [0 : 0] wea;
+reg [8 : 0] addra;
+reg [15 : 0] dina;
+wire [15 : 0] douta;
+wire rsta_busy;
+/*****************************************************
+** Instance Definition **
+*****************************************************/
+test_bram u0 (
+.clk (clk),
+.rsta (rsta),
+.ena (ena),
+.wea (wea),
+.addra (addra),
+.dina (dina),
+.douta (douta),
+.rsta_busy (rsta_busy) );
+/*****************************************************
+** Instance Definition **
+*****************************************************/
+initial begin
+clk = 0; rsta = 1; wea = 0; ena = 0; #100;
+rsta = 0; #100000000;
+end
+always #10740 ena = ~ena;
+always #10740 wea = ~wea;
+always #10 clk = ~clk;
+/*****************************************************
+** addra Address Generation **
+*****************************************************/
+always@(posedge clk) begin
+ if (rsta) begin
+ addra <= 0;
+ end
+ else begin
+ if (addra == 'd512) begin
+ addra <= 0;
+ end
+ else begin
+ addra <= addra + 1;
+ end
+end
+ end
+/*****************************************************
+** dina Data Generation **
+*****************************************************/
+always@(posedge clk) begin
+ if (rsta) begin
+ dina <= 'h0001;
+ end
+ else begin
+ if (dina == 'hFFFF) begin
+ dina <= 'h0001;
+ end
+ else begin
+ dina <= {dina[14:0], dina[0]};
+ end
+ end
+ end
+endmodule
+
