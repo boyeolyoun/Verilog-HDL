@@ -321,20 +321,21 @@ BCD-to-세그먼트 변환 코드이다. 이 코드는 BCD의 입력을 세그�
 이다.
 
 
-module int2seg1 (int, seg);
+module int2seg1(int, seg);
 input [3:0] int;
 output reg[6:0] seg;
+
 always@(int) begin
-if(int==0) seg<=7'b100_0000;
-else if(int==1) seg<=7'b111_1001;
-else if(int==2) seg<=7'b010_0100;
-else if(int==3) seg<=7'b011_0000;
-else if(int==4) seg<=7'b001_1001;
-else if(int==5) seg<=7'b001_0010;
-else if(int==6) seg<=7'b000_0010;
-else if(int==7) seg<=7'b111_1000;
-else if(int==8) seg<=7'b000_0000;
-else seg<=7'b001_1000;
+if (int== 0) seg<= 7'b0111111; //gfedcba
+else if(int== 1) seg<= 7'b0000110;
+else if(int== 2) seg<= 7'b1011011;
+else if(int== 3) seg<= 7'b1001111;
+else if(int== 4) seg<= 7'b1100110;
+else if(int== 5) seg<= 7'b1101101;
+else if(int== 6) seg<= 7'b1111101;
+else if(int== 7) seg<= 7'b0000111;
+else if(int== 8) seg<= 7'b1111111;
+else seg<=7'b1101111;
 end
 endmodule
 
